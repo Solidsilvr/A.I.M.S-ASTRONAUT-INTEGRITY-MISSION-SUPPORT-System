@@ -1,4 +1,4 @@
-# A.I.M.S. – Astronaut Integrity & Mission Support (ENTRY TO NASA SPACE APPS CHALLENGE 2026)
+# A.I.M.S. – Astronaut Integrity & Mission Support (ENTRY TO NASA SPACE APPS CHALLENGE 2026 - Team "SteeBallRun")
 
 **An ESP32-based wearable health-monitoring and mission-support system with a real-time web dashboard.**
 
@@ -560,3 +560,4 @@ Contributers:
 Solidsilvr
 gladwinyvesmicheal
 Waterlaww
+AdwaithSachin
