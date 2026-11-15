@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A.I.M.S. - Astronaut Integrity &amp; Mission Support</title>
+<style>
+:root{--bg:#070d19;--p:#0f1a2f;--l:#22314f;--t:#dbe6f5;--m:#8aa0bf;--ok:#4ade80;--w:#fcd34d;--c:#ff5a5f;--a:#38bdf8}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:14px system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--l)}
+h1{font-size:16px;margin:0;letter-spacing:.08em}.m{color:var(--m)}
+.badge{padding:4px 12px;border-radius:99px;font-weight:700;font-size:12px}
+.NORMAL{background:#0f3d2e;color:var(--ok)}.WARNING{background:#4a3a0c;color:var(--w)}.CRITICAL{background:#4a1219;color:var(--c);animation:bl 1s infinite}
+@keyframes bl{50%{opacity:.55}}
+nav{display:flex;gap:6px;padding:8px 18px;overflow:auto;border-bottom:1px solid var(--l)}
+button,select,input{background:var(--p);color:var(--t);border:1px solid var(--l);border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
+nav button.on{border-color:var(--a);color:var(--a)}button:hover{border-color:var(--a)}
+main{padding:18px;max-width:1000px;margin:auto}section{display:none}section.on{display:block}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--p);border:1px solid var(--l);border-radius:12px;padding:12px}
+.card b{display:block;font-size:26px;line-height:1.2}.card small{color:var(--m)}
+.bar{height:6px;background:var(--l);border-radius:4px;margin-top:8px}.bar i{display:block;height:100%;border-radius:4px;transition:width .5s}
+.row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.log div{padding:6px 10px;border-bottom:1px solid var(--l);font-size:13px}.log .warn{color:var(--w)}.log .crit{color:var(--c)}.log .ok{color:var(--ok)}
+.crew{display:grid;grid-template-columns:minmax(180px,240px) 1fr;gap:18px}@media(max-width:640px){.crew{grid-template-columns:1fr}}
+svg{width:100%;max-width:230px}
+.part{cursor:pointer;--f:#dfe6ee;--s:#5b6b7d}.part *{fill:var(--f);stroke:var(--s);stroke-width:2}
+.part .pn{fill:#3a4a63}.part .vz{fill:#16233b}
+.part.sel *{stroke:var(--a);stroke-width:3}
+.sev-minor{--f:#ffd166;--s:#b8860b}.sev-moderate{--f:#ff9f43;--s:#c4630d}.sev-severe{--f:#ff4d4f;--s:#a8071a;animation:bl 1s infinite}
+#ring{fill:none;stroke:var(--a);stroke-width:2;stroke-dasharray:4 3;pointer-events:none}
+.pl button{display:grid;grid-template-columns:1fr auto 60px;width:100%;margin-bottom:4px;text-align:left;gap:8px}.pl .on{border-color:var(--a)}
+canvas{width:100%;max-width:480px;background:#050a14;border:1px solid var(--l);border-radius:12px}
+.pk{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 4px;background:var(--a);animation:mv 1.2s infinite}@keyframes mv{50%{transform:translateY(-6px)}}
+</style></head><body>
+<header><div><h1>A.I.M.S.</h1><span class="m">Astronaut Integrity &amp; Mission Support</span></div>
+<div class="m" id="clock"></div><div><span id="link" class="badge WARNING"></span> <span id="os" class="badge"></span></div></header>
+<nav id="tabs"></nav>
+<main>
+<section id="live"><div class="g" id="scores"></div>
+<div class="row"><button onclick="sim('o2')">Oxygen emergency</button><button onclick="sim('eva')">EVA breach</button><button onclick="sim('cd')">Comms degrade</button><button onclick="sim('cf')">Comms failure</button><button onclick="sim('ok')">Restore nominal</button>
+<button id="con" onclick="connect()">Connect ESP32 (USB)</button>
+<input id="ip" value="aims-band.local" size="16" aria-label="ESP32 address"><button id="wf" onclick="wifi()">Connect via WiFi</button></div>
+<p class="m">Demo data is simulated until the band is connected. WiFi: type the IP or name printed in the Arduino Serial Monitor (e.g. 192.168.1.42). USB: Chrome/Edge only, and close the Serial Monitor first. Open this file from your computer, not from a website.</p>
+<h3>Latest events</h3><div class="log card" id="recent"></div></section>
+
+<section id="crew"><div class="crew"><div>
+<svg viewBox="0 0 200 330" aria-label="Astronaut injury map">
+<g class="part" data-p="right_leg"><rect x="64" y="190" width="32" height="104" rx="14"/><rect x="58" y="290" width="42" height="26" rx="10"/></g>
+<g class="part" data-p="left_leg"><rect x="104" y="190" width="32" height="104" rx="14"/><rect x="100" y="290" width="42" height="26" rx="10"/></g>
+<g class="part" data-p="right_arm"><g transform="rotate(8 56 98)"><rect x="32" y="92" width="26" height="84" rx="13"/><circle cx="45" cy="180" r="13"/></g></g>
+<g class="part" data-p="left_arm"><g transform="rotate(-8 144 98)"><rect x="142" y="92" width="26" height="84" rx="13"/><circle cx="155" cy="180" r="13"/></g></g>
+<g class="part" data-p="torso"><rect x="62" y="88" width="76" height="106" rx="16"/><rect class="pn" x="80" y="106" width="40" height="26" rx="4"/><circle class="pn" cx="90" cy="152" r="4"/><circle class="pn" cx="110" cy="152" r="4"/></g>
+<g class="part" data-p="head"><circle cx="100" cy="46" r="34"/><ellipse class="vz" cx="100" cy="48" rx="22" ry="17"/></g>
+<text x="14" y="96" fill="#8aa0bf" font-size="11" text-anchor="middle">R</text><text x="186" y="96" fill="#8aa0bf" font-size="11" text-anchor="middle">L</text>
+<circle id="ring" r="9"/></svg>
+<p class="m" style="font-size:12px">Dashed ring = ESP32 band. Colours: grey nominal, amber minor, orange moderate, red severe.</p></div>
+<div><div class="g" id="vit"></div><div id="inj" class="badge" style="display:inline-block;margin-bottom:10px"></div>
+<div class="pl" id="pl"></div><p id="det" class="m"></p>
+<div class="row"><span class="m">Simulate on selected part:</span><button onclick="hurtSel(15)">Minor</button><button onclick="hurtSel(30)">Moderate</button><button onclick="hurtSel(45)">Severe</button><button onclick="clr(1)">Clear part</button><button onclick="clr()">Clear all</button></div>
+<div class="row"><span class="m">Band worn on:</span><select id="sens"></select></div></div></div></section>
+
+<section id="map"><canvas id="cv" width="480" height="480"></canvas><p id="mapt"></p></section>
+<section id="comms"><div class="g" id="cg"></div><p style="font-size:20px">MOON <span id="pks"></span> EARTH</p></section>
+<section id="logs"><div class="row"><select id="flt" onchange="rend()"><option value="">All</option><option>HEALTH</option><option>EVA</option><option>COMMS</option><option>LINK</option></select></div><div class="log card" id="all"></div></section>
+</main>
+<script>
+const $=s=>document.querySelector(s),cl=v=>Math.max(0,Math.min(100,v)),R=Math.round;
+const PARTS=['head','torso','right_arm','left_arm','right_leg','left_leg'];
+const PN={head:'Head / helmet',torso:'Torso / chest',right_arm:'Right arm',left_arm:'Left arm',right_leg:'Right leg',left_leg:'Left leg'};
+const RANK={none:0,minor:1,moderate:2,severe:3},RING={head:[100,20],torso:[100,150],right_arm:[38,150],left_arm:[162,150],right_leg:[80,250],left_leg:[120,250]};
+const S={t0:Date.now(),hr:72,spo2:98,temp:36.8,force:0,sel:'right_arm',sensor:'right_arm',live:0,dist:200,ang:.6,sig:92,loss:.5,lat:1.3,m:{o2:0,eva:0,cm:0},log:[],st:{},parts:{},tab:'live'};
+PARTS.forEach(p=>S.parts[p]={sev:'none',peak:0,t:0,src:'-'});
+
+function logE(cat,msg,lvl=''){S.log.unshift({t:Date.now(),cat,msg,lvl});S.log.length=Math.min(S.log.length,200)}
+function met(){let s=R((Date.now()-S.t0)/1e3),f=n=>String(n).padStart(2,0);return `MET ${f(s/3600|0)}:${f(s/60%60|0)}:${f(s%60)}`}
+function hurt(p,f,src){const sev=f>=40?'severe':f>=25?'moderate':f>=12?'minor':'none';if(sev=='none')return;
+ const o=S.parts[p];o.peak=Math.max(o.peak,f);o.t=Date.now();o.src=src;
+ if(RANK[sev]>RANK[o.sev]){o.sev=sev;logE('HEALTH',`${PN[p]} injury: ${sev} (${f.toFixed(1)} N, ${src})`,sev=='severe'?'crit':'warn')}}
+function hurtSel(f){hurt(S.sel,f,'simulated');rend()}
+function clr(one){(one?[S.sel]:PARTS).forEach(p=>S.parts[p]={sev:'none',peak:0,t:0,src:'-'});logE('HEALTH',one?PN[S.sel]+' cleared':'All injuries cleared','ok');rend()}
+function sim(k){const m=S.m;if(k=='o2'){m.o2=1;logE('HEALTH','Oxygen emergency triggered','crit')}
+ if(k=='eva'){m.eva=1;logE('EVA','EVA safety-radius breach triggered','crit')}
+ if(k=='cd'){m.cm=1;logE('COMMS','Communications degrading','warn')}if(k=='cf'){m.cm=2;logE('COMMS','Critical communications failure','crit')}
+ if(k=='ok'){m.o2=m.eva=m.cm=0;PARTS.forEach(p=>S.parts[p]={sev:'none',peak:0,t:0,src:'-'});logE('LINK','Nominal conditions restored','ok')}rend()}
+
+function calc(){const inj=PARTS.filter(p=>S.parts[p].sev!='none'),sv=p=>S.parts[p].sev;
+ const pen=Math.min(70,inj.reduce((a,p)=>a+{minor:5,moderate:15,severe:35}[sv(p)]*(p=='head'?1.5:p=='torso'?1.3:1),0));
+ const h=cl(100-Math.max(0,95-S.spo2)*3-Math.max(0,S.hr-100)*.8-Math.max(0,55-S.hr)*1.5-Math.max(0,Math.abs(S.temp-36.8)-.8)*10-pen);
+ const bad=inj.some(p=>sv(p)=='severe')||inj.length>=3;
+ const hs=(S.spo2<90||S.hr>=120||S.hr<=45||bad)?'CRITICAL':(S.spo2<95||S.hr>100||S.hr<55||inj.length)?'WARNING':'NORMAL';
+ const e=cl(100-S.dist/25),es=S.dist>2000?'CRITICAL':S.dist>1000?'WARNING':'NORMAL';
+ const c=cl(S.sig-S.loss*1.2),cs=(S.sig<30||S.loss>25)?'CRITICAL':(S.sig<70||S.loss>5)?'WARNING':'NORMAL';
+ const o=cl(h*.6+e*.25+c*.15),a=[hs,es,cs],os=a.includes('CRITICAL')?'CRITICAL':(a.includes('WARNING')||o<80)?'WARNING':'NORMAL';
+ return{h,hs,e,es,c,cs,o,os,pen,inj}}
+
+function tick(){const k=Date.now()/1e3,live=Date.now()-S.live<3000,r=()=>Math.random()-.5;
+ if(!live){S.hr+=((S.m.o2?112:72+6*Math.sin(k/9))-S.hr)*.3+r()*2;S.spo2+=((S.m.o2?84:98)-S.spo2)*.3+r()*.6;S.force=0}
+ S.temp=36.8+.1*Math.sin(k/30);S.dist+=((S.m.eva?2300:300+250*Math.sin(k/40))-S.dist)*.15;S.ang+=.03;
+ const c=S.m.cm;S.sig+=([92,55,12][c]-S.sig)*.3+r()*3;S.loss=Math.max(0,S.loss+([.5,8,60][c]-S.loss)*.3+r()*.4);S.lat=[1.3,1.6,2.8][c]+r()*.05;
+ const x=calc();[['HEALTH',x.hs],['EVA',x.es],['COMMS',x.cs]].forEach(([n,s])=>{if(S.st[n]&&S.st[n]!=s)logE(n,`${n} state: ${S.st[n]} -> ${s}`,s=='CRITICAL'?'crit':s=='WARNING'?'warn':'ok');S.st[n]=s});
+ rend()}
+
+const col=s=>s=='CRITICAL'?'var(--c)':s=='WARNING'?'var(--w)':'var(--ok)';
+const card=(t,v,u,b,s)=>`<div class="card"><small>${t}</small><b>${v}<small> ${u}</small></b>${b==null?'':`<div class="bar"><i style="width:${b}%;background:${col(s)}"></i></div>`}</div>`;
+const logH=f=>S.log.filter(e=>!f||e.cat==f).map(e=>`<div class="${e.lvl}">${new Date(e.t).toISOString().slice(11,19)} [${e.cat}] ${e.msg}</div>`).join('')||'<div class="m">No events yet</div>';
+
+function rend(){const x=calc(),live=Date.now()-S.live<3000;
+ $('#clock').textContent=met()+'  |  UTC '+new Date().toISOString().slice(11,19);
+ $('#link').textContent=live?'ESP32 LIVE':'SIMULATED DATA';$('#link').className='badge '+(live?'NORMAL':'WARNING');
+ $('#os').textContent=x.os;$('#os').className='badge '+x.os;
+ $('#scores').innerHTML=card('Crew integrity',R(x.o),'%',x.o,x.os)+card('Health',R(x.h),'%',x.h,x.hs)+card('EVA safety',R(x.e),'%',x.e,x.es)+card('Comms',R(x.c),'%',x.c,x.cs);
+ $('#recent').innerHTML=logH().split('</div>').slice(0,5).join('</div>');$('#all').innerHTML=logH($('#flt').value);
+ $('#vit').innerHTML=card('Heart rate',R(S.hr),'bpm')+card('SpO2',R(S.spo2),'%')+card('Temp',S.temp.toFixed(1),'C')+card('Force',S.force.toFixed(1),'N');
+ $('#inj').textContent='Injury status: '+(x.inj.some(p=>S.parts[p].sev=='severe')||x.inj.length>=3?'CRITICAL':x.inj.length?'WARNING':'NORMAL')+(x.pen?` (health -${R(x.pen)})`:'');
+ $('#inj').className='badge '+$('#inj').textContent.split(': ')[1].split(' ')[0];
+ document.querySelectorAll('.part').forEach(g=>g.setAttribute('class','part sev-'+S.parts[g.dataset.p].sev+(S.sel==g.dataset.p?' sel':'')));
+ const rg=RING[S.sensor];$('#ring').setAttribute('cx',rg[0]);$('#ring').setAttribute('cy',rg[1]);
+ $('#pl').innerHTML=PARTS.map(p=>{const o=S.parts[p];return `<button data-p="${p}" class="${S.sel==p?'on':''}"><span>${PN[p]}</span><span class="m">${o.sev}</span><span class="m">${o.peak?o.peak.toFixed(1)+' N':'-'}</span></button>`}).join('');
+ const o=S.parts[S.sel];$('#det').innerHTML=`<b>${PN[S.sel]}</b>: ${o.sev}`+(o.t?` - peak ${o.peak.toFixed(1)} N, ${R((Date.now()-o.t)/1e3)}s ago, via ${o.src}`:'');
+ $('#cg').innerHTML=card('Signal',R(S.sig),'%',S.sig,x.cs)+card('Packet loss',S.loss.toFixed(1),'%')+card('Latency',S.lat.toFixed(2),'s one-way')+card('Link integrity',R(x.c),'%',x.c,x.cs);
+ $('#pks').innerHTML=Array(5).fill(`<span class="pk" style="background:${col(x.cs)}"></span>`).join('');
+ $('#mapt').innerHTML=`Distance from habitat: <b>${R(S.dist)} m</b> - EVA state: <b style="color:${col(x.es)}">${x.es}</b>`}
+
+function drawMap(){const c=$('#cv'),g=c.getContext('2d'),w=c.width,cx=w/2,Rr=w/2-14,sc=Rr/2500,t=Date.now()/1e3;g.clearRect(0,0,w,w);g.font='11px system-ui';
+ [[250,'#2a6'],[500,'#2a6'],[1000,'#da3'],[2000,'#d44']].forEach(([m,cc])=>{g.beginPath();g.arc(cx,cx,m*sc,0,7);g.strokeStyle=cc;g.stroke();g.fillStyle='#789';g.fillText(m>=1000?m/1000+' km':m+' m',cx+4,cx-m*sc+11)});
+ const sw=t*1.5%(2*Math.PI);g.beginPath();g.moveTo(cx,cx);g.arc(cx,cx,Rr,sw-.5,sw);g.closePath();g.fillStyle='rgba(56,189,248,.15)';g.fill();
+ g.fillStyle='#dbe6f5';g.fillRect(cx-6,cx-6,12,12);g.fillText('HAB',cx+9,cx+4);
+ const d=Math.min(S.dist,2450)*sc,x=cx+Math.cos(S.ang)*d,y=cx+Math.sin(S.ang)*d,s=$('#os').className.includes('CRITICAL')?'#ff5a5f':'#4ade80';
+ g.beginPath();g.arc(x,y,6,0,7);g.fillStyle=s;g.fill();g.fillText('CREW',x+9,y+4)}
+
+async function connect(){if(!('serial' in navigator)){alert('Web Serial needs Chrome or Edge on desktop.');return}
+ try{const p=await navigator.serial.requestPort();await p.open({baudRate:115200});$('#con').textContent='ESP32 connected';logE('LINK','ESP32 connected over USB','ok');
+ const rd=p.readable.pipeThrough(new TextDecoderStream()).getReader();let b='';
+ for(;;){const{value,done}=await rd.read();if(done)break;b+=value;let i;while((i=b.indexOf('\n'))>=0){feed(b.slice(0,i));b=b.slice(i+1)}}}
+ catch(e){logE('LINK','ESP32 serial closed: '+e.message,'warn')}$('#con').textContent='Connect ESP32 (USB)'}
+/* WiFi link: polls the band's REST API  GET http://<band>/api/telemetry  once per second */
+let wt=0;
+function wifi(){if(wt){clearInterval(wt);wt=0;$('#wf').textContent='Connect via WiFi';logE('LINK','WiFi link stopped','warn');return}
+ const url='http://'+($('#ip').value.trim()||'aims-band.local')+'/api/telemetry';let ok=null;
+ const poll=async()=>{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),1500);
+  try{const r=await fetch(url,{signal:ac.signal,cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const d=await r.json();
+   if(ok!==true)logE('LINK','ESP32 connected over WiFi','ok');ok=true;useJson(d)}
+  catch(e){if(ok!==false)logE('LINK','WiFi link failed ('+e.message+'). Check the address and that the band is on the same network.','warn');ok=false}
+  clearTimeout(to)};
+ $('#wf').textContent='Disconnect WiFi';poll();wt=setInterval(poll,1000)}
+function useJson(d){S.live=Date.now();S.force=+d.linear_force_n||0;if(d.hr>0)S.hr=d.hr;if(d.spo2>0)S.spo2=d.spo2;
+ if(PARTS.includes(d.injury_part)&&S.sensor!=d.injury_part){S.sensor=d.injury_part;$('#sens').value=d.injury_part}
+ if(d.injury)hurt(S.sensor,Math.max(+d.peak_force_n||0,S.force),'esp32')}
+function feed(l){const m=l.match(/HR:(\d+), SpO2:(\d+), G:[\d.]+, Lin:[\d.]+, F:([\d.]+), PK:([\d.]+).*inj:(\d)/);if(!m)return;
+ S.live=Date.now();S.force=+m[3];if(+m[1]>0)S.hr=+m[1];if(+m[2]>0)S.spo2=+m[2];if(m[5]=='1')hurt(S.sensor,Math.max(+m[3],+m[4]),'esp32')}
+
+$('#tabs').innerHTML=[['live','MISSION LIVE'],['crew','CREW'],['map','LUNAR MAP'],['comms','COMMS'],['logs','MISSION LOG']].map(([id,n])=>`<button data-t="${id}">${n}</button>`).join('');
+$('#sens').innerHTML=PARTS.map(p=>`<option value="${p}">${PN[p]}</option>`).join('');$('#sens').value=S.sensor;$('#sens').onchange=e=>{S.sensor=e.target.value;rend()};
+function tab(t){S.tab=t;document.querySelectorAll('section').forEach(s=>s.className=s.id==t?'on':'');document.querySelectorAll('nav button').forEach(b=>b.className=b.dataset.t==t?'on':'')}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-t]'),p=e.target.closest('[data-p]');if(t)tab(t.dataset.t);if(p){S.sel=p.dataset.p;rend()}});
+logE('LINK','A.I.M.S. started (simulated data)','ok');tab('live');tick();setInterval(tick,1000);setInterval(drawMap,50);
+</script></body></html>
