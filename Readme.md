@@ -556,4 +556,7 @@ Potential improvements include:
 - Battery and power-consumption monitoring.
 
 ---
+Contributers:
+Solid silver
+Gladyy..
 
