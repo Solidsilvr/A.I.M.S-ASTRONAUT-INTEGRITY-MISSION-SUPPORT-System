@@ -557,6 +557,6 @@ Potential improvements include:
 
 ---
 Contributers:
-Solid silver
-Gladyy..
-
+Solidsilvr
+gladwinyvesmicheal
+Waterlaww
